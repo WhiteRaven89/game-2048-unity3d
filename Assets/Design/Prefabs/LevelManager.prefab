@@ -1,0 +1,62 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &5319508685297112689
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1585637188324026078}
+  - component: {fileID: 5734152412045985698}
+  m_Layer: 0
+  m_Name: LevelManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1585637188324026078
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5319508685297112689}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 0
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &5734152412045985698
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5319508685297112689}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 084434846ab043f48b8bd167e3e0e242, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  levelDataHandler: {fileID: 11400000, guid: 236f0027e6f2b284d88b1f4623d83b67, type: 2}
+  lstLevelInfo: []
+  backGroundTilePrefab: {fileID: 492798, guid: 037b9202a110d524db7cb16ffb7b52d3, type: 3}
+  lstNumbersTilePrefabs:
+  - {fileID: 428338, guid: f33c38de46ec01349ab46d82ff4324be, type: 3}
+  - {fileID: 493360, guid: fe084e79b6a833942a1f6d28b140c3ea, type: 3}
+  - {fileID: 469594, guid: 2d9c5b7b196e2d14f8da4ccfe6ed3726, type: 3}
+  - {fileID: 444932, guid: 4a7600a6cca1f8b42ac77121fff09720, type: 3}
+  - {fileID: 444932, guid: 29680d4ca04270a419f8dae25d033f3e, type: 3}
+  - {fileID: 444932, guid: 2b4d54248da47b84bbc6fb88d9d4cac9, type: 3}
+  - {fileID: 444932, guid: a99e41399917a134283b6cc8814a1065, type: 3}
+  - {fileID: 444932, guid: ad0b2eded01db6c449edce6f50a5a896, type: 3}
+  - {fileID: 444932, guid: 63b81089fc48232448f9bf16e0e98964, type: 3}
+  - {fileID: 444932, guid: 1549d88e3e982744899128b2f5ee68f8, type: 3}
+  stateManager: {fileID: 0}
+  xyDistance: 0.15
+  zDistance: 0

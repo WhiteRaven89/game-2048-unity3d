@@ -1,6 +1,4 @@
-﻿using Arma.Input;
-using System.Collections;
-using System.Collections.Generic;
+﻿using mrathod.Input;
 using UnityEngine;
 
 

@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 
-namespace Arma.Input
+namespace mrathod.Input
 {
     public delegate void InputEventListeners(InputType inputType);
 

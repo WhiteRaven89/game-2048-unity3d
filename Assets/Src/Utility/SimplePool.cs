@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-namespace Arma.Utility
+namespace mrathod.Utility
 {
     /// <summary>
     /// Wrapper to create simple object pool

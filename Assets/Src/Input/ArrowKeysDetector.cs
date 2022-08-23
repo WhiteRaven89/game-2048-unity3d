@@ -1,4 +1,4 @@
-﻿namespace Arma.Input
+﻿namespace mrathod.Input
 {
     using UnityEngine;
 

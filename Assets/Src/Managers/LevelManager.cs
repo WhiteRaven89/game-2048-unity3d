@@ -1,4 +1,4 @@
-﻿using Arma.Input;
+﻿using mrathod.Input;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -24,8 +24,8 @@ public class LevelManager : MonoBehaviour
     [SerializeField]
     List<Transform> lstNumbersTilePrefabs = null;
 
-    Arma.Utility.SimplePool backgroundTilePool = null;
-    Arma.Utility.SimplePool numbersTilePool = null;
+    mrathod.Utility.SimplePool backgroundTilePool = null;
+    mrathod.Utility.SimplePool numbersTilePool = null;
 
     bool isLevelLoaded = false;
 
@@ -121,7 +121,7 @@ public class LevelManager : MonoBehaviour
         rows = (int)gridDimension.x;
         columns = (int)gridDimension.y;
         int totalTiles = rows * columns;
-        backgroundTilePool = new Arma.Utility.SimplePool(backGroundTilePrefab.gameObject, totalTiles, this.gameObject);
+        backgroundTilePool = new mrathod.Utility.SimplePool(backGroundTilePrefab.gameObject, totalTiles, this.gameObject);
 
         if (backgroundTiles == null) backgroundTiles = new List<GameObject>();
         else backgroundTiles.Clear();

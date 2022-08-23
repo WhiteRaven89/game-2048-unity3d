@@ -1,5 +1,5 @@
 ﻿
-namespace Arma.Input
+namespace mrathod.Input
 {
     public interface IInputDetector
     {

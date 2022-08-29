@@ -1,6 +1,8 @@
-﻿using mrathod.Input;
+﻿using mrathod;
+using mrathod.Input;
+using Patterns;
 using UnityEngine;
-
+using UnityEngine.SceneManagement;
 
 public class GameHandler : MonoBehaviour
 {
@@ -19,24 +21,18 @@ public class GameHandler : MonoBehaviour
     [SerializeField]
     bool waitingForInput = false;
 
-    void OnEnable()
+    GenericFSM<EGameState> fsm = null;
+
+    public void RegisterInput()
     {
-        if (stateManager != null)
-        {
-            stateManager.RegisterEvent(OnGameStateChangedReciever);
-        }
         if (inputManager != null)
         {
             InputManager.RegisterEvent(InputReciever);
         }
     }
 
-    void OnDisable()
+    public void DeRegisterInput()
     {
-        if (stateManager != null)
-        {
-            stateManager.DeRegisterEvent(OnGameStateChangedReciever);
-        }
         if (inputManager != null)
         {
             InputManager.DeRegisterEvent(InputReciever);
@@ -45,22 +41,29 @@ public class GameHandler : MonoBehaviour
 
     void Start()
     {
-        Initialize();
-    }
-
-    void OnGameStateChangedReciever(StateManager.GameState changedState)
-    {
-        if(changedState == StateManager.GameState.WaitingForInput) waitingForInput = true;
-        else waitingForInput = false;
-
-        if (changedState == StateManager.GameState.Loaded) ChangeGameStateTo(StateManager.GameState.WaitingForInput);
-    }
-
-    void Initialize()
-    {
         profileManagerRef.SetGameHandler(this);
         levelManagerRef.SetGameHandler(this);
-        ChangeGameStateTo(StateManager.GameState.Loading);
+        InitializeFSM();
+    }
+
+    void OnGameStateChangedReciever(EGameState changedState)
+    {
+        if(changedState == EGameState.WAITING_FOR_INPUT) waitingForInput = true;
+        else waitingForInput = false;
+
+        if (changedState == EGameState.LOADED) ChangeGameStateTo(EGameState.WAITING_FOR_INPUT);
+    }
+
+    void InitializeFSM()
+    {
+        fsm = new GenericFSM<EGameState>();
+        fsm.Add(new GameLoadingState(this));
+        //fsm.Add(new GameLoadedState(this));
+        fsm.Add(new WaitingForInputState(this));
+        fsm.Add(new ExecuteAlgorithmState(this));
+        fsm.Add(new GameOverState(this));
+
+        ChangeGameStateTo(EGameState.LOADING);
     }
 
     public int GetUserLevel()
@@ -70,34 +73,50 @@ public class GameHandler : MonoBehaviour
 
     void InputReciever(InputType inputType)
     {
-        if(waitingForInput)
-        {
-            levelManagerRef.OnInputRecieved(inputType);
-        }
+        levelManagerRef.OnInputRecieved(inputType);
     }
 
-    void ChangeGameStateTo(StateManager.GameState newState)
+    void ChangeGameStateTo(EGameState newState)
     {
-        stateManager.ChangeStateTo(newState);
+        //stateManager.ChangeStateTo(newState);
+        fsm.SetCurrentState(newState);
+    }
+
+    public void LoadGame()
+    {
+        levelManagerRef.LoadGameLevel();
     }
 
     public void OnSetupCompleted()
     {
-        ChangeGameStateTo(StateManager.GameState.Loaded);
+        //ChangeGameStateTo(EGameState.LOADED);
+        ChangeGameStateTo(EGameState.WAITING_FOR_INPUT);
     }
 
     public void NoMovesLeft()
     {
-        ChangeGameStateTo(StateManager.GameState.GameOver);
+        ChangeGameStateTo(EGameState.GAME_OVER);
     }
 
     public void MovesAvailable()
     {
-        ChangeGameStateTo(StateManager.GameState.WaitingForInput);
+        ChangeGameStateTo(EGameState.WAITING_FOR_INPUT);
     }
 
-    public void CheckingMatches()
+    public void OnInputProcessed()
     {
-        ChangeGameStateTo(StateManager.GameState.CheckingMatches);
+        ChangeGameStateTo(EGameState.EXECUTE_ALOGRITHM);
+    }
+
+    public void ProcessTileMoveAlgorithm()
+    {
+        levelManagerRef.ProcessTileShiftAlgorithm();
+    }
+
+    public void OnGameFinished()
+    {
+        Debug.Log(":: GameHandler.cs :: OnGameFinished :: Reloading scene");
+        Scene currentScene = SceneManager.GetActiveScene();
+        SceneManager.LoadScene(currentScene.name);
     }
 }

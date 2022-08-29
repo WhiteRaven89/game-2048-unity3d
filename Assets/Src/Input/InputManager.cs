@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace mrathod.Input
@@ -81,7 +82,7 @@ namespace mrathod.Input
 
             if(inputListeners != null)
             {
-                foreach (InputEventListeners listener in inputListeners)
+                foreach (InputEventListeners listener in inputListeners.ToList())
                 {
                     listener(inputEvent);
                 }

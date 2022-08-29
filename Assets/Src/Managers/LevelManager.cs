@@ -38,7 +38,7 @@ public class LevelManager : MonoBehaviour
     [SerializeField]
     private int zDistance = 0;
 
-    bool recievedInput = false;
+    InputType inputType;    //  Later refactor
 
     int[,] availableSlots = null;
 
@@ -51,36 +51,6 @@ public class LevelManager : MonoBehaviour
     private List<GameObject> backgroundTiles; 
 
     private List<GameObject> numberTiles;
-
-    // Start is called before the first frame update
-    void Start()
-    {
-        SetLevelData(string.Empty);
-    }
-
-    void OnEnable()
-    {
-        if (stateManager != null)
-        {
-            stateManager.RegisterEvent(OnGameStateChangedReciever);
-        }
-    }
-
-    void OnDisable()
-    {
-        if (stateManager != null)
-        {
-            stateManager.DeRegisterEvent(OnGameStateChangedReciever);
-        }
-    }
-
-    void OnGameStateChangedReciever(StateManager.GameState changedState)
-    {
-        if(changedState == StateManager.GameState.Loading)
-        {
-            StartCoroutine(LoadGameLevel(gameHandlerRef.GetUserLevel()));
-        }
-    }
 
     /// <summary>
     /// Set Level Data from file may be from server else load it from scriptabe objects
@@ -103,7 +73,12 @@ public class LevelManager : MonoBehaviour
         gameHandlerRef = handler;
     }
 
-    IEnumerator LoadGameLevel(int aLevel)
+    public void LoadGameLevel()
+    {
+        SetLevelData(string.Empty);
+        StartCoroutine(LoadGameLevelCoroutine(gameHandlerRef.GetUserLevel()));
+    }
+    IEnumerator LoadGameLevelCoroutine(int aLevel)
     {
         yield return new WaitUntil(() => lstLevelInfo != null && lstLevelInfo.Count > 0);
         Debug.Log(":: LoadGameLevel :: Trying to Load level : " + aLevel);
@@ -220,32 +195,29 @@ public class LevelManager : MonoBehaviour
 
     public void OnInputRecieved(InputType inputType)
     {
-        if(!recievedInput)
+        this.inputType = inputType;
+        gameHandlerRef.OnInputProcessed();
+    }
+
+    public void ProcessTileShiftAlgorithm()
+    {
+        //  After recieving input process it on tiles
+        //  Check for Game logic
+        if (inputType == InputType.Up) MoveTilesUp();
+        else if (inputType == InputType.Down) MoveTilesDown();
+        else if (inputType == InputType.Left) MoveTilesLeft();
+        else if (inputType == InputType.Right) MoveTilesRight();
+
+        if (IsMoveLeft())
         {
-            recievedInput = true;
-            //  Hold for input until input is processed on tiles
-            gameHandlerRef.CheckingMatches();
-
-            //  After recieving input process it on tiles
-            //  Check for Game logic
-            if (inputType == InputType.Up) MoveTilesUp();
-            else if (inputType == InputType.Down) MoveTilesDown();
-            else if (inputType == InputType.Left) MoveTilesLeft();
-            else if (inputType == InputType.Right) MoveTilesRight();
-
-            if(IsMoveLeft())
-            {
-                CheckTilesForMerging();
-                CreatetileAtRandomPosition();
-                PrintSlotsAvailable();
-                gameHandlerRef.MovesAvailable();
-            }
-            else
-            {
-                gameHandlerRef.NoMovesLeft();
-            }
-
-            recievedInput = false;
+            CheckTilesForMerging();
+            CreatetileAtRandomPosition();
+            PrintSlotsAvailable();
+            gameHandlerRef.MovesAvailable();
+        }
+        else
+        {
+            gameHandlerRef.NoMovesLeft();
         }
     }
 

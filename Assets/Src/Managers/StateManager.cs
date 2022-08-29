@@ -1,29 +1,16 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 
-public delegate void OnGameStateChanged(StateManager.GameState changedState);
+public delegate void OnGameStateChanged(EGameState changedState);
 
 /// <summary>
 /// Game State Manager
 /// </summary>
 public class StateManager : MonoBehaviour
 {
-    /// <summary>
-    /// TODO Later need to convert it to State Machine System
-    /// </summary>
-    public enum GameState
-    {
-        None,
-        Loading,
-        Loaded,
-        WaitingForInput,
-        CheckingMatches,
-        GameOver
-    }
     
-    private GameState currentGameState = GameState.None;
+    private EGameState currentGameState = EGameState.NONE;
 
     /// <summary>
     /// Event listeners for game state changed
@@ -63,7 +50,7 @@ public class StateManager : MonoBehaviour
     /// <summary>
     /// Trigger event with corresponding action.
     /// </summary>
-    void RaiseEvent(GameState changedState, params object[] args)
+    void RaiseEvent(EGameState changedState, params object[] args)
     {
         Debug.Log(":: StateManager :: Raised game state changed event of " + changedState);
         if (gameStateChangedListener != null)
@@ -76,7 +63,7 @@ public class StateManager : MonoBehaviour
     }
     #endregion
     
-    public void ChangeStateTo(GameState newState)
+    public void ChangeStateTo(EGameState newState)
     {
         Debug.Log(":: StateManager :: Trying to change Game state from " + currentGameState + " to " + newState);
         if (currentGameState == newState)
@@ -90,15 +77,15 @@ public class StateManager : MonoBehaviour
         
         switch (currentGameState)
         {
-            case GameState.Loading:
+            case EGameState.LOADING:
                 break;
-            case GameState.Loaded:
+            case EGameState.LOADED:
                 break;
-            case GameState.WaitingForInput:
+            case EGameState.WAITING_FOR_INPUT:
                 break;
-            case GameState.CheckingMatches:
+            case EGameState.EXECUTE_ALOGRITHM:
                 break;
-            case GameState.GameOver:
+            case EGameState.GAME_OVER:
                 break;
             default:
                 break;

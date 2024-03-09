@@ -52,6 +52,8 @@ Thumbs.db
 Library/
 Temp/
 UserSettings/
+output/
+.vs/
 
 # Visual studio files
 *.vsconfig

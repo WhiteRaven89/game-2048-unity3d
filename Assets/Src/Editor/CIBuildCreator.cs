@@ -70,7 +70,7 @@ namespace mrathod
             switch (buildTarget)
             {
                 case BuildTarget.StandaloneWindows:
-                    buildPlayerOptions.locationPathName = "/output/Game2048.exe";// GetBuildPath(buildTarget);
+                    buildPlayerOptions.locationPathName = GetBuildPath(buildTarget);
                     break;
                 case BuildTarget.iOS:
                     buildPlayerOptions.locationPathName = GetBuildPath(buildTarget);

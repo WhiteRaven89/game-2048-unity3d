@@ -40,7 +40,7 @@ namespace mrathod
         */
         public static void BuildGame()
         {
-            string platform = GetCommandLineParameter("platform");
+            string platform = GetCommandLineParameter("buildTarget");
 
             if (platform.Equals(""))
             {
@@ -107,7 +107,7 @@ namespace mrathod
 
         private static string GetBuildPath(BuildTarget target)
         {
-            string workspacePath = GetCommandLineParameter("workspace");
+            string workspacePath = GetCommandLineParameter("projectPath");
             string buildPath = $"{workspacePath}/output/{PlayerSettings.bundleVersion}/";
             
             switch (target)

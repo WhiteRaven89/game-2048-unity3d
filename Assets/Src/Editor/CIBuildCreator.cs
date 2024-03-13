@@ -106,7 +106,8 @@ namespace mrathod
 
         private static string GetBuildPath(BuildTarget target)
         {
-            string buildPath = $"/output/{PlayerSettings.bundleVersion}/";
+            string workspacePath = GetCommandLineParameter("workspace");
+            string buildPath = $"{workspacePath}/output/{PlayerSettings.bundleVersion}/";
 
             switch (target)
             {

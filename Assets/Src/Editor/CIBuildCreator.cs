@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using UnityEditor;
 using UnityEditor.Build.Reporting;
 
@@ -108,17 +109,23 @@ namespace mrathod
         {
             string workspacePath = GetCommandLineParameter("workspace");
             string buildPath = $"{workspacePath}/output/{PlayerSettings.bundleVersion}/";
-
+            
             switch (target)
             {
                 case BuildTarget.StandaloneWindows:
-                    return buildPath + target + "/Game2048.exe";
+                    buildPath += target + "/Game2048.exe";
+                    break;
                 case BuildTarget.iOS:
-                    return buildPath + target + "/" + PlayerSettings.iOS.buildNumber+"/";
+                    buildPath += target + "/" + PlayerSettings.iOS.buildNumber+"/";
+                    break;
                 case BuildTarget.Android:
-                    return buildPath + target + "/" + "Game2048_" + PlayerSettings.Android.bundleVersionCode + ".apk";
+                    buildPath += target + "/" + "Game2048_" + PlayerSettings.Android.bundleVersionCode + ".apk";
+                    break;
+                default:
+                    throw new Exception($"Platform {target} is not implemented");
             }
-            throw new Exception($"Platform {target} is not implemented");
+            UnityEngine.Debug.Log($"---Build path: {buildPath}");
+            return buildPath;
         }
     }
 }

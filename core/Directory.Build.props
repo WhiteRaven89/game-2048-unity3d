@@ -1,0 +1,18 @@
+<Project>
+
+  <!-- Shared settings for every project in core/. Kept here rather than repeated
+       in four .csproj files, so the dependency and warning policy in AGENTS.md has
+       exactly one place it can be changed - and one place a diff can be reviewed. -->
+  <PropertyGroup>
+    <Nullable>enable</Nullable>
+
+    <!-- The agent loop's feedback signal is the build. A warning nobody reads is
+         not feedback, so warnings fail the build. -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+
+    <!-- Deterministic output: same source in, same bytes out. -->
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+
+</Project>

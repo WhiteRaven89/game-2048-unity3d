@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Game2048.Core\Game2048.Core.csproj" />
+  </ItemGroup>
+
+  <!-- MoveScript parses the replay format, and a wrong parse plays a different game
+       without saying so - the one place in this front-end where a bug is invisible.
+       The tests reach in for that and nothing else. Argument parsing, rendering and
+       the console loop stay untested on purpose: their failures are immediate and
+       obvious, and the harness asserts the exit codes end to end. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="Game2048.Core.Tests" />
+  </ItemGroup>
+
+</Project>

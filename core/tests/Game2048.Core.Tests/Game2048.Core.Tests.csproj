@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <!-- xUnit stack only. AGENTS.md rule 3: anything added here fails the harness
+       dependency check. coverlet was removed from the template for that reason. -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+    <PackageReference Include="xunit" Version="2.5.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Game2048.Core\Game2048.Core.csproj" />
+    <ProjectReference Include="..\..\src\Game2048.Legacy\Game2048.Legacy.csproj" />
+    <ProjectReference Include="..\..\src\Game2048.Cli\Game2048.Cli.csproj" />
+  </ItemGroup>
+
+</Project>

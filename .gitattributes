@@ -1,0 +1,16 @@
+# Line endings for the extracted work.
+#
+# The harness applies patches with `git apply`, and a patch generated against LF
+# files will not apply to a CRLF checkout. On Windows core.autocrlf=true converts
+# on checkout, so without this the transcript replay breaks on one machine and
+# works on another - which is the worst kind of demo failure.
+#
+# Scoped deliberately. Assets/ and ProjectSettings/ are frozen and are left to
+# whatever git was already doing with them; this file must not cause the Unity
+# project to be rewritten.
+core/**      text eol=lf
+harness/**   text eol=lf
+docs/**      text eol=lf
+AGENTS.md    text eol=lf
+README.md    text eol=lf
+.gitattributes text eol=lf

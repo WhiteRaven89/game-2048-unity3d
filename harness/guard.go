@@ -21,6 +21,8 @@ var deniedPaths = []struct {
 	{"AGENTS.md", "the rules of the run are not the agent's to rewrite"},
 	{"harness/", "the harness judges the run; it cannot also be the thing under change"},
 	{".gitignore", "an ignore rule would hide a new file from the diff check below"},
+	{".gitattributes", "diff and merge behaviour are not the agent's to redefine"},
+	{delegationLogPath, "the record of what an agent did is not the agent's to edit"},
 }
 
 // isDeniedPattern reports whether a task's writePath would reach into a denied
@@ -41,15 +43,19 @@ func isDeniedPattern(pattern string) (bool, string) {
 	for _, denied := range deniedPaths {
 		trimmed := strings.TrimSuffix(denied.prefix, "/")
 
-		// The pattern points into denied ground...
+		// The pattern points into denied ground.
 		if prefix == trimmed || strings.HasPrefix(prefix, denied.prefix) {
 			return true, denied.why
 		}
 
-		// ...or denied ground sits underneath it, which is the same problem seen
-		// from the other end. An empty prefix - a bare "**" - lands here against
-		// every entry, which is correct: it asks for everything.
-		if strings.HasPrefix(trimmed+"/", prefix) {
+		// Or denied ground sits underneath it - the same problem seen from the
+		// other end. This only applies to denied *directories*. A pattern that
+		// happens to contain one denied file is fine, because the per-file check
+		// still refuses that file: "docs/**" is a reasonable scope for a task that
+		// writes documentation, and it does not become unreasonable just because
+		// the delegation log also lives in docs/. Applying the rule to files as
+		// well made that whole directory unusable.
+		if strings.HasSuffix(denied.prefix, "/") && strings.HasPrefix(trimmed+"/", prefix) {
 			return true, denied.why
 		}
 	}

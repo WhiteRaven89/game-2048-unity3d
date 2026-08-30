@@ -71,16 +71,37 @@ func (r *Repo) trackNewFiles() error {
 	return err
 }
 
-// IsClean reports whether the tree has no changes at all. A run refuses to start
-// otherwise, because a guardrail cannot tell an agent's edit from one that was
-// already sitting there.
+// IsClean reports whether the tree has anything in it the harness did not put
+// there. A run refuses to start otherwise, because a guardrail cannot tell an
+// agent's edit from one that was already sitting there.
+//
+// The delegation log is the single exception, and it has to be: the harness
+// appends to it at the end of every run, so requiring a spotless tree would mean
+// a second run could never follow a first without a commit in between - and two
+// runs back to back is the normal way this gets used.
 func (r *Repo) IsClean() (bool, error) {
 	out, err := r.run("status", "--porcelain")
 	if err != nil {
 		return false, err
 	}
 
-	return strings.TrimSpace(out) == "", nil
+	for _, line := range splitLines(out) {
+		entry := strings.TrimSpace(line)
+
+		if entry == "" {
+			continue
+		}
+
+		// Porcelain lines are "XY path"; the status letters are never a path.
+		fields := strings.Fields(entry)
+		path := fields[len(fields)-1]
+
+		if path != delegationLogPath && path != "docs/" {
+			return false, nil
+		}
+	}
+
+	return true, nil
 }
 
 func (r *Repo) CurrentBranch() (string, error) {

@@ -8,13 +8,19 @@ import (
 	"time"
 )
 
+// delegationLogPath is where every run is recorded, repo-relative and in git's
+// forward-slash form. Named once because three places need to agree on it: the
+// writer below, the clean-tree check that has to forgive it, and the deny list
+// that stops an agent editing its own record.
+const delegationLogPath = "docs/DELEGATION-LOG.md"
+
 // appendDelegationLog adds one run to docs/DELEGATION-LOG.md.
 //
 // It appends and never rewrites. A log an agent loop can edit is a log that
 // records only the runs it was happy with, and the runs worth reading are the
 // ones that went wrong.
 func appendDelegationLog(root string, run *Run) error {
-	path := filepath.Join(root, "docs", "DELEGATION-LOG.md")
+	path := filepath.Join(root, filepath.FromSlash(delegationLogPath))
 
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err

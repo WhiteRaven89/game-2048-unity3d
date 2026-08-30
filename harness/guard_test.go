@@ -82,6 +82,9 @@ func TestLegitimateWritePathsAreAccepted(t *testing.T) {
 	fine := []string{
 		"core/src/**",
 		"core/src/Game2048.Core/**",
+		// Allowed even though the delegation log lives under it. A denied *file*
+		// does not poison the directory around it - the per-file check still
+		// refuses the log itself - or no task could ever write documentation.
 		"docs/**",
 	}
 
@@ -89,6 +92,22 @@ func TestLegitimateWritePathsAreAccepted(t *testing.T) {
 		if blocked, why := isDeniedPattern(pattern); blocked {
 			t.Errorf("writePath %q should be accepted, refused as: %s", pattern, why)
 		}
+	}
+}
+
+func TestTheDelegationLogCannotBeWrittenEvenUnderAnAllowedScope(t *testing.T) {
+	// The pairing that makes the previous test safe: docs/** is a legal scope,
+	// and the log inside it is still refused when the diff is checked.
+	if blocked, _ := isDeniedPattern("docs/DELEGATION-LOG.md"); !blocked {
+		t.Error("a task should not be able to name the delegation log as a writePath")
+	}
+
+	if blocked, _ := isDeniedPath("docs/DELEGATION-LOG.md"); !blocked {
+		t.Error("writing the delegation log should be refused")
+	}
+
+	if blocked, _ := isDeniedPath("docs/FINDINGS.md"); blocked {
+		t.Error("an ordinary doc should still be writable")
 	}
 }
 

@@ -1,0 +1,16 @@
+{
+  "id": "undo-stack",
+  "goal": "Add a bounded undo stack to Game2048.Core.\n\nGame should expose Undo(): it restores the board and score from before the last successful TryMove and returns false when there is nothing to undo. Keep at most 16 states. Undo must not consume any random draws - a replayed game that undoes and redoes must land on the same board as one that never undid.\n\nDo not change the signature of any existing public member.",
+  "writePaths": ["core/src/Game2048.Core/**"],
+  "maxIterations": 4,
+  "maxChangedLines": 250,
+  "replay": {
+    "seed": 7,
+    "movesFile": "harness/testdata/moves.txt",
+    "expect": {
+      "score": "28",
+      "cells": "0,2,4,8,0,0,0,8,0,0,0,0,0,2,4,2",
+      "over": "false"
+    }
+  }
+}

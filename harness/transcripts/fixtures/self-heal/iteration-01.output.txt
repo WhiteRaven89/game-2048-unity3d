@@ -1,0 +1,5 @@
+Added MaxTile and TilesMerged to MoveResult. Both are derived from what the move
+already produced, so nothing new is stored on Board.
+
+While I was in Rules.Move I also tidied up how the read pointer advances after a
+merge.

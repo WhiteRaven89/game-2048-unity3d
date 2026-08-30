@@ -1,0 +1,15 @@
+{
+  "id": "telemetry",
+  "goal": "Add two read-only values to MoveResult: MaxTile (the largest tile on the resulting board) and TilesMerged (the number of merges this move performed).\n\nBoth must be derivable from what Move already computes. Do not add a field to Board.",
+  "writePaths": ["core/src/Game2048.Core/**"],
+  "maxIterations": 3,
+  "maxChangedLines": 120,
+  "replay": {
+    "seed": 7,
+    "movesFile": "harness/testdata/moves.txt",
+    "expect": {
+      "score": "28",
+      "cells": "0,2,4,8,0,0,0,8,0,0,0,0,0,2,4,2"
+    }
+  }
+}

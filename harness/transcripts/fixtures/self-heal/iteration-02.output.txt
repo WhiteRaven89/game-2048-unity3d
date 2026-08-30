@@ -1,0 +1,5 @@
+Every failure has one cause. Advancing the read pointer to the partner instead of
+past it let the tile a merge had just produced merge again in the same move, so
+[2,2,2,2] collapsed to [8,0,0,0] rather than [4,4,0,0].
+
+Restored that line. MaxTile and TilesMerged are unchanged.

@@ -66,14 +66,14 @@ func run() int {
 		return 2
 	}
 
-	// Hold the delegation log out of the tree for the whole run, before anything
-	// else looks at the tree. It is the only file the harness itself writes into
-	// the repo, and every check below is cleaner for its absence: the clean-tree
-	// precondition needs no exception, and the diff the guardrails read contains
-	// nothing the harness put there. Restored on every exit path, including a
-	// panic - losing the record of earlier runs because this one failed would be
-	// the worst trade available.
-	previousLog, err := takeLogCustody(repo.Root)
+	// Put the delegation log back to its committed state before anything else
+	// looks at the tree, keeping what it held. It is the only file the harness
+	// itself writes into the repo, and every check below is cleaner for it being
+	// unchanged: the clean-tree precondition needs no exception, and the diff the
+	// guardrails read contains nothing the harness put there. Written back on
+	// every exit path, including a panic - losing the record of earlier runs
+	// because this one failed would be the worst trade available.
+	previousLog, err := takeLogCustody(repo)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "could not take custody of the delegation log:", err)
 

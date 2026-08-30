@@ -9,9 +9,8 @@ import (
 )
 
 // delegationLogPath is where every run is recorded, repo-relative and in git's
-// forward-slash form. Named once because three places need to agree on it: the
-// writer below, the clean-tree check that has to forgive it, and the deny list
-// that stops an agent editing its own record.
+// forward-slash form. Named once because two places have to agree on it: the
+// writer below, and the deny list that stops an agent editing its own record.
 const delegationLogPath = "docs/DELEGATION-LOG.md"
 
 const logHeader = "# Delegation log\n\n" +
@@ -19,37 +18,49 @@ const logHeader = "# Delegation log\n\n" +
 	"edited afterwards except the **What I changed** lines, which are written by\n" +
 	"hand - the column that matters is what the checks *missed*.\n"
 
-// takeLogCustody lifts the delegation log out of the working tree for the
-// duration of a run, returning what it held.
+// takeLogCustody reads the delegation log and leaves the tree looking as though
+// the harness had never written it, returning what it held.
 //
-// The log is the only file the harness itself writes into the repo, and leaving
-// it there during a run makes a mess of the one check that matters: the diff
-// against the run's base shows a modified file the agent never touched, and the
-// guardrail blames the agent for the harness's own output. The alternative -
-// teaching the diff check to ignore this path - would open exactly the hole the
-// deny list exists to close, since an agent editing its own record would then
-// look identical to the harness writing it.
+// The log is the only file the harness itself puts into the repo, and any
+// difference between it and HEAD during a run poisons the one check that matters:
+// the diff shows a changed file the agent never touched, and the guardrail blames
+// the agent for the harness's output. Teaching the diff check to ignore this path
+// would open exactly the hole the deny-list entry exists to close, because an
+// agent editing its own record would then look identical to the harness writing
+// it.
 //
-// Holding it out of the tree instead means the tree is genuinely clean while the
-// agent works, so no check anywhere needs an exception, and a log file appearing
-// mid-run is unambiguously the agent's doing.
-func takeLogCustody(root string) (string, error) {
-	path := filepath.Join(root, filepath.FromSlash(delegationLogPath))
+// So custody means "make this file match HEAD", which is three different actions
+// depending on where it stands:
+//
+//   - Already committed and unmodified: nothing to do. Importantly not a
+//     deletion. Removing it unconditionally was the previous version of this
+//     function, and it broke every run the moment the log was first committed,
+//     because a tracked file removed is a dirty tree.
+//   - Committed but edited by hand: restore the committed content, having kept
+//     the edits to write back afterwards.
+//   - Not committed at all: remove it.
+func takeLogCustody(repo *Repo) (string, error) {
+	path := filepath.Join(repo.Root, filepath.FromSlash(delegationLogPath))
 
-	existing, err := os.ReadFile(path)
-	if os.IsNotExist(err) {
-		return "", nil
+	existing, readErr := os.ReadFile(path)
+	if readErr != nil && !os.IsNotExist(readErr) {
+		return "", readErr
 	}
 
+	tracked, err := repo.IsTracked(delegationLogPath)
 	if err != nil {
 		return "", err
 	}
 
-	if err := os.Remove(path); err != nil {
-		return "", err
+	if tracked {
+		return string(existing), repo.RestoreFromHead(delegationLogPath)
 	}
 
-	return string(existing), nil
+	if os.IsNotExist(readErr) {
+		return "", nil
+	}
+
+	return string(existing), os.Remove(path)
 }
 
 // returnLog puts the log back, with this run appended. Appending and never

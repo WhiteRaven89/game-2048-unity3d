@@ -109,6 +109,23 @@ func (r *Repo) Checkout(ref string) error {
 	return err
 }
 
+// IsTracked reports whether git already knows about a path.
+func (r *Repo) IsTracked(path string) (bool, error) {
+	out, err := r.run("ls-files", "--", path)
+	if err != nil {
+		return false, err
+	}
+
+	return strings.TrimSpace(out) != "", nil
+}
+
+// RestoreFromHead puts one tracked file back to its committed content.
+func (r *Repo) RestoreFromHead(path string) error {
+	_, err := r.run("checkout", "--", path)
+
+	return err
+}
+
 // ChangedPaths lists every path that differs from Base, new files included.
 func (r *Repo) ChangedPaths() ([]string, error) {
 	if err := r.trackNewFiles(); err != nil {

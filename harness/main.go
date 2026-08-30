@@ -66,6 +66,28 @@ func run() int {
 		return 2
 	}
 
+	// Hold the delegation log out of the tree for the whole run, before anything
+	// else looks at the tree. It is the only file the harness itself writes into
+	// the repo, and every check below is cleaner for its absence: the clean-tree
+	// precondition needs no exception, and the diff the guardrails read contains
+	// nothing the harness put there. Restored on every exit path, including a
+	// panic - losing the record of earlier runs because this one failed would be
+	// the worst trade available.
+	previousLog, err := takeLogCustody(repo.Root)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "could not take custody of the delegation log:", err)
+
+		return 2
+	}
+
+	logRestored := false
+
+	defer func() {
+		if !logRestored {
+			_ = returnLog(repo.Root, previousLog, nil)
+		}
+	}()
+
 	// A run starts from a clean tree or not at all. Otherwise the guardrail
 	// cannot tell what the agent did from what was already sitting there, and
 	// the one check that matters becomes unreliable exactly when it is needed.
@@ -125,13 +147,15 @@ func run() int {
 		}
 	}
 
-	// The log is written last, after the checkout, and this ordering is the whole
-	// point of it. Written before, it lands on the run branch, gets committed with
-	// the attempt, and disappears the moment the harness puts you back where you
-	// started - so the one record meant to outlive the run is the one thing thrown
-	// away with it. Written here, it lands uncommitted on the branch you are
-	// actually on, which is where someone will read it.
-	if err := appendDelegationLog(repo.Root, result); err != nil {
+	// The log goes back last, after the checkout, and the ordering is the whole
+	// point of it. Restored before, it lands on the run branch, gets committed
+	// with the attempt, and disappears the moment the harness puts you back where
+	// you started - so the one record meant to outlive the run is the only thing
+	// guaranteed to be thrown away with it. Restored here, it lands uncommitted on
+	// the branch you are actually on, which is where someone will read it.
+	logRestored = true
+
+	if err := returnLog(repo.Root, previousLog, result); err != nil {
 		fmt.Fprintln(os.Stderr, "could not write the delegation log:", err)
 	}
 

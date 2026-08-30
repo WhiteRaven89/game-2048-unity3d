@@ -14,39 +14,64 @@ import (
 // that stops an agent editing its own record.
 const delegationLogPath = "docs/DELEGATION-LOG.md"
 
-// appendDelegationLog adds one run to docs/DELEGATION-LOG.md.
+const logHeader = "# Delegation log\n\n" +
+	"Every harness run, appended automatically by `harness/`. Nothing here is\n" +
+	"edited afterwards except the **What I changed** lines, which are written by\n" +
+	"hand - the column that matters is what the checks *missed*.\n"
+
+// takeLogCustody lifts the delegation log out of the working tree for the
+// duration of a run, returning what it held.
 //
-// It appends and never rewrites. A log an agent loop can edit is a log that
-// records only the runs it was happy with, and the runs worth reading are the
-// ones that went wrong.
-func appendDelegationLog(root string, run *Run) error {
+// The log is the only file the harness itself writes into the repo, and leaving
+// it there during a run makes a mess of the one check that matters: the diff
+// against the run's base shows a modified file the agent never touched, and the
+// guardrail blames the agent for the harness's own output. The alternative -
+// teaching the diff check to ignore this path - would open exactly the hole the
+// deny list exists to close, since an agent editing its own record would then
+// look identical to the harness writing it.
+//
+// Holding it out of the tree instead means the tree is genuinely clean while the
+// agent works, so no check anywhere needs an exception, and a log file appearing
+// mid-run is unambiguously the agent's doing.
+func takeLogCustody(root string) (string, error) {
+	path := filepath.Join(root, filepath.FromSlash(delegationLogPath))
+
+	existing, err := os.ReadFile(path)
+	if os.IsNotExist(err) {
+		return "", nil
+	}
+
+	if err != nil {
+		return "", err
+	}
+
+	if err := os.Remove(path); err != nil {
+		return "", err
+	}
+
+	return string(existing), nil
+}
+
+// returnLog puts the log back, with this run appended. Appending and never
+// rewriting is the point: a log that gets tidied records only the runs someone
+// was happy with, and the runs worth reading are the ones that went wrong.
+func returnLog(root, previous string, run *Run) error {
 	path := filepath.Join(root, filepath.FromSlash(delegationLogPath))
 
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
 
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		header := "# Delegation log\n\n" +
-			"Every harness run, appended automatically by `harness/`. Nothing here is\n" +
-			"edited afterwards except the **What I changed** lines, which are written by\n" +
-			"hand - the column that matters is what the checks *missed*.\n"
-
-		if writeErr := os.WriteFile(path, []byte(header), 0o644); writeErr != nil {
-			return writeErr
-		}
+	if strings.TrimSpace(previous) == "" {
+		previous = logHeader
 	}
 
-	file, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY, 0o644)
-	if err != nil {
-		return err
+	body := previous
+	if run != nil {
+		body += renderRun(run)
 	}
 
-	defer file.Close()
-
-	_, err = file.WriteString(renderRun(run))
-
-	return err
+	return os.WriteFile(path, []byte(body), 0o644)
 }
 
 func renderRun(run *Run) string {

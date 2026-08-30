@@ -105,10 +105,6 @@ func run() int {
 
 	result := execute(repo, task, agent, *timeout, os.Stdout)
 
-	if err := appendDelegationLog(repo.Root, result); err != nil {
-		fmt.Fprintln(os.Stderr, "could not write the delegation log:", err)
-	}
-
 	fmt.Printf("\noutcome %s\n", result.Outcome)
 
 	if result.Branch != "" && !*keepBranch {
@@ -127,6 +123,16 @@ func run() int {
 		} else {
 			fmt.Printf("work is on %s; you are back on %s\n", result.Branch, startingBranch)
 		}
+	}
+
+	// The log is written last, after the checkout, and this ordering is the whole
+	// point of it. Written before, it lands on the run branch, gets committed with
+	// the attempt, and disappears the moment the harness puts you back where you
+	// started - so the one record meant to outlive the run is the one thing thrown
+	// away with it. Written here, it lands uncommitted on the branch you are
+	// actually on, which is where someone will read it.
+	if err := appendDelegationLog(repo.Root, result); err != nil {
+		fmt.Fprintln(os.Stderr, "could not write the delegation log:", err)
 	}
 
 	if result.Outcome == OutcomePassed {

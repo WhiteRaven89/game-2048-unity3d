@@ -37,7 +37,12 @@ func verify(root string, task *Task) []Step {
 		return steps
 	}
 
-	steps = append(steps, runStep("test", root, summariseTests, "dotnet", "test", solution, "--nologo", "-v", "q", "--no-build"))
+	// Normal verbosity, not quiet. Quiet prints the names of failing tests and
+	// nothing else, so the agent is handed "this test failed" with no statement
+	// of what it expected or got - which is an invitation to guess. Normal
+	// includes the assertion message, and summariseTests keeps that and discards
+	// the stack frames.
+	steps = append(steps, runStep("test", root, summariseTests, "dotnet", "test", solution, "--nologo", "-v", "n", "--no-build"))
 
 	if !steps[1].Passed {
 		return steps
@@ -127,14 +132,20 @@ func summariseTests(output string) string {
 
 		kept = append(kept, trimmed)
 
-		// The assertion message sits directly under the name; two lines of it is
-		// usually the whole story and never a wall of stack frames.
-		for _, follow := range lines[i+1 : min(i+3, len(lines))] {
+		// The assertion message sits directly under the name. Take a few lines of
+		// it and stop at the stack trace, which is never the useful part.
+		for _, follow := range lines[i+1 : min(i+5, len(lines))] {
 			text := strings.TrimSpace(follow)
 
-			if text != "" && !strings.Contains(text, "[FAIL]") && !strings.Contains(text, "Stack Trace") {
-				kept = append(kept, "    "+text)
+			if text == "" || strings.Contains(text, "[FAIL]") {
+				break
 			}
+
+			if strings.Contains(text, "Stack Trace") {
+				break
+			}
+
+			kept = append(kept, "    "+text)
 		}
 	}
 

@@ -26,6 +26,10 @@ Flags:
   -dry-run  Check the task spec and the working tree, then stop.
 
 Exit codes: 0 passed, 1 did not pass, 2 the harness could not run.
+
+"Did not pass" includes a run where every check went green over an empty diff.
+That is not success - the checks pass when nothing happened too - so it is
+reported separately and left for a person to judge.
 `
 
 func main() {

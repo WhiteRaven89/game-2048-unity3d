@@ -17,6 +17,20 @@ const (
 	OutcomeExhausted Outcome = "exhausted the iteration cap"
 	OutcomeBlocked   Outcome = "blocked by a guardrail"
 	OutcomeErrored   Outcome = "the harness itself failed"
+
+	// OutcomeNoChange is every check green over an empty diff.
+	//
+	// Not a success, and it took a live agent to notice. The loop's definition of
+	// done was "the checks pass", and the checks also pass when nothing happened -
+	// so an agent that does nothing and reports that the work was already done
+	// gets exactly the same green tick as one that did the work.
+	//
+	// Sometimes doing nothing is right; the run that exposed this was a task whose
+	// premise was false, and the agent correctly declined to invent a fix. But the
+	// harness cannot tell that from an agent that gave up, and a category it cannot
+	// distinguish is one it must not silently resolve in the agent's favour. So it
+	// says which one happened and hands the decision to a person.
+	OutcomeNoChange Outcome = "verification passed, but nothing changed"
 )
 
 // Iteration records one pass through the loop.
@@ -152,9 +166,25 @@ func execute(repo *Repo, task *Task, agent Agent, timeout time.Duration, out io.
 		run.Iterations = append(run.Iterations, iteration)
 
 		if iteration.Passed() {
+			changed, err := repo.ChangedLineCount()
+			if err != nil {
+				run.Outcome, run.Error = OutcomeErrored, err.Error()
+
+				return run
+			}
+
+			if changed == 0 {
+				run.Outcome = OutcomeNoChange
+
+				fmt.Fprintf(out, "\nevery check passed and the diff is empty.\n")
+				fmt.Fprintf(out, "the agent changed nothing - read what it said before believing the green.\n")
+
+				return run
+			}
+
 			run.Outcome = OutcomePassed
 
-			fmt.Fprintf(out, "\npassed on iteration %d\n", number)
+			fmt.Fprintf(out, "\npassed on iteration %d (%d lines changed)\n", number, changed)
 
 			return run
 		}

@@ -159,6 +159,17 @@ func run() int {
 		fmt.Fprintln(os.Stderr, "could not write the delegation log:", err)
 	}
 
+	// Recorded transcripts land here too, and for the same reason. They live under
+	// harness/, which agents may not write, so producing them mid-run made the
+	// guardrail block the harness's own recorder and blame the agent for it.
+	if recorder, ok := agent.(*ExecAgent); ok {
+		if err := recorder.Flush(); err != nil {
+			fmt.Fprintln(os.Stderr, "could not write the transcript:", err)
+		} else if recorder.RecordTo != "" {
+			fmt.Printf("transcript recorded to %s\n", recorder.RecordTo)
+		}
+	}
+
 	if result.Outcome == OutcomePassed {
 		return 0
 	}

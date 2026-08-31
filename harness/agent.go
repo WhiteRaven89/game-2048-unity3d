@@ -39,6 +39,20 @@ type ExecAgent struct {
 	// RecordTo, when set, saves each iteration's prompt, output and resulting
 	// patch, turning a live session into one ReplayAgent can play back.
 	RecordTo string
+
+	// Recordings are held in memory until Flush, deliberately. Transcripts live
+	// under harness/, which is a denied path, so writing them during a run made
+	// the guardrail block the harness's own recorder and attribute it to the
+	// agent - the same mistake the delegation log made, in a second place. The
+	// agent's diff has to contain only the agent's work.
+	recordings []recording
+}
+
+type recording struct {
+	iteration int
+	prompt    string
+	output    string
+	patch     string
 }
 
 func (a *ExecAgent) Name() string { return "exec:" + strings.Join(a.Command, " ") }
@@ -73,20 +87,6 @@ func (a *ExecAgent) Work(ctx context.Context, prompt string, iteration int) (str
 }
 
 func (a *ExecAgent) record(iteration int, prompt, output string) error {
-	if err := os.MkdirAll(a.RecordTo, 0o755); err != nil {
-		return err
-	}
-
-	stem := filepath.Join(a.RecordTo, fmt.Sprintf("iteration-%02d", iteration))
-
-	if err := os.WriteFile(stem+".prompt.txt", []byte(prompt), 0o644); err != nil {
-		return err
-	}
-
-	if err := os.WriteFile(stem+".output.txt", []byte(output), 0o644); err != nil {
-		return err
-	}
-
 	// The patch is what makes the transcript replayable. Intent-to-add first, so
 	// files the agent created are in it: a transcript missing a new file replays
 	// as a build error, which reads like the agent's mistake rather than the
@@ -100,7 +100,42 @@ func (a *ExecAgent) record(iteration int, prompt, output string) error {
 		return err
 	}
 
-	return os.WriteFile(stem+".patch", []byte(patch), 0o644)
+	a.recordings = append(a.recordings, recording{
+		iteration: iteration,
+		prompt:    prompt,
+		output:    output,
+		patch:     patch,
+	})
+
+	return nil
+}
+
+// Flush writes the recorded session to disk. Called once the run is over and the
+// guardrails have had their look, never during.
+func (a *ExecAgent) Flush() error {
+	if a.RecordTo == "" || len(a.recordings) == 0 {
+		return nil
+	}
+
+	if err := os.MkdirAll(a.RecordTo, 0o755); err != nil {
+		return err
+	}
+
+	for _, entry := range a.recordings {
+		stem := filepath.Join(a.RecordTo, fmt.Sprintf("iteration-%02d", entry.iteration))
+
+		for suffix, content := range map[string]string{
+			".prompt.txt": entry.prompt,
+			".output.txt": entry.output,
+			".patch":      entry.patch,
+		} {
+			if err := os.WriteFile(stem+suffix, []byte(content), 0o644); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 // ReplayAgent plays back a recorded session, one iteration at a time.

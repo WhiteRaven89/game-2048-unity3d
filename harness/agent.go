@@ -163,14 +163,24 @@ func (a *ReplayAgent) Work(_ context.Context, _ string, iteration int) (string, 
 		return string(output), fmt.Errorf("transcript iteration %d has no patch: %w", iteration, err)
 	}
 
-	if strings.TrimSpace(string(patch)) == "" {
-		return string(output), nil
+	// Reset first, and unconditionally. A recorded patch is cumulative against the
+	// run's base, the same way the guardrail diff is, so the tree has to be back at
+	// base before it is applied - including when the patch is empty, which is how a
+	// recorded iteration says "I reverted what I did last time". Skipping the reset
+	// in that case left the previous iteration's breakage in place and made the
+	// recovery unreplayable.
+	if _, err := git(a.Dir, "reset", "--hard", "HEAD"); err != nil {
+		return string(output), err
 	}
 
-	// Reset first: a recorded patch is cumulative against the run's base, the
-	// same way the guardrail diff is.
-	if _, err := git(a.Dir, "checkout", "--", "."); err != nil {
+	// Untracked files from a previous iteration would survive the reset. Ignored
+	// files are left alone: -d without -x.
+	if _, err := git(a.Dir, "clean", "-fd"); err != nil {
 		return string(output), err
+	}
+
+	if strings.TrimSpace(string(patch)) == "" {
+		return string(output), nil
 	}
 
 	apply := exec.Command("git", "apply", "--whitespace=nowarn", stem+".patch")

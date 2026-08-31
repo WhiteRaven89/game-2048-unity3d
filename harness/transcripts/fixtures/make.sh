@@ -18,7 +18,7 @@ scratch="$(mktemp -d)"
 trap 'rm -rf "$scratch"' EXIT
 
 rules="core/src/Game2048.Core/Rules.cs"
-result="core/src/Game2048.Core/MoveResult.cs"
+# MoveResult.cs is no longer patched by any fixture; the live agent got there first.
 gameover_tests="core/tests/Game2048.Core.Tests/RulesGameOverTests.cs"
 
 # stage <relative-path>... - copy each current file into base/ and head/
@@ -71,75 +71,46 @@ OUT
 
 # ---------------------------------------------------------------- self-heal
 #
-# Iteration 1 delivers the feature and breaks something else on the way in: a
-# merged tile is allowed to merge again. Existing tests catch it. Iteration 2 is
-# the same feature with the regression removed.
+# A refactor that breaks the merge cap, and the corrected version of it.
+#
+# This fixture used to add MaxTile and TilesMerged alongside the regression. A
+# live agent has since written that feature for real, it was reviewed and merged,
+# and the patch stopped applying - which is exactly the rot this script exists to
+# prevent, arriving from the one direction it could not: the repository catching
+# up with the fixture. The regression is the part worth demonstrating, so that is
+# all the fixture does now.
 
 mkdir -p "$here/self-heal"
 
-cat > "$scratch/telemetry.txt" <<'BLOCK'
-
-        /// <summary>
-        /// The largest tile on the resulting board, for telemetry and for a
-        /// "new best" callout. Computed on read; a move is not a hot path.
-        /// </summary>
-        public int MaxTile
-        {
-            get
-            {
-                if (Board is null)
-                {
-                    return 0;
-                }
-
-                int largest = 0;
-
-                for (int r = 0; r < Board.Rows; r++)
-                {
-                    for (int c = 0; c < Board.Columns; c++)
-                    {
-                        if (Board[r, c] > largest)
-                        {
-                            largest = Board[r, c];
-                        }
-                    }
-                }
-
-                return largest;
-            }
-        }
-
-        /// <summary>How many merges this move performed.</summary>
-        public int TilesMerged => Merges.Count;
-BLOCK
-
-anchor='public IReadOnlyList<Merge> Merges'
-
-# Iteration 1: feature plus regression.
-stage "$rules" "$result"
-sed -i "/$anchor/r $scratch/telemetry.txt" "$scratch/head/$result"
+# Iteration 1: the regression. Advancing to the partner rather than past it lets
+# the tile a merge just produced merge again in the same move.
+stage "$rules"
 sed -i 's|                        read = partner + 1;|                        read = partner;|' "$scratch/head/$rules"
-emit_patch "$here/self-heal/iteration-01.patch" "$rules" "$result"
+emit_patch "$here/self-heal/iteration-01.patch" "$rules"
 
 cat > "$here/self-heal/iteration-01.output.txt" <<'OUT'
-Added MaxTile and TilesMerged to MoveResult. Both are derived from what the move
-already produced, so nothing new is stored on Board.
+Tidied up how the read pointer advances after a merge in Rules.Move. The
+`partner + 1` was doing two things at once - consuming the merged pair and
+skipping ahead - so I simplified it to advance to the partner and let the loop
+pick up from there.
 
-While I was in Rules.Move I also tidied up how the read pointer advances after a
-merge.
+Build is clean.
 OUT
 
-# Iteration 2: the same feature, correct collapse.
-stage "$rules" "$result"
-sed -i "/$anchor/r $scratch/telemetry.txt" "$scratch/head/$result"
-emit_patch "$here/self-heal/iteration-02.patch" "$rules" "$result"
+# Iteration 2: the line restored, with the reason written down so the next reader
+# does not make the same simplification.
+stage "$rules"
+sed -i 's|                        // direction of travel.|                        // direction of travel. Advancing only to the partner instead\n                        // of past it would let the tile this merge just produced merge\n                        // again on the next pass, which is what makes it "+ 1".|' "$scratch/head/$rules"
+emit_patch "$here/self-heal/iteration-02.patch" "$rules"
 
 cat > "$here/self-heal/iteration-02.output.txt" <<'OUT'
 Every failure has one cause. Advancing the read pointer to the partner instead of
 past it let the tile a merge had just produced merge again in the same move, so
-[2,2,2,2] collapsed to [8,0,0,0] rather than [4,4,0,0].
+[2,2,2,2] collapsed to [8,0,0,0] rather than [4,4,0,0], and the board's total
+value changed across a move.
 
-Restored that line. MaxTile and TilesMerged are unchanged.
+Restored the `+ 1` and wrote down why it is there, since "simplify this" is an
+easy mistake to make twice.
 OUT
 
 echo "fixtures written:"

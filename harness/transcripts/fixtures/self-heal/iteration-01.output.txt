@@ -1,5 +1,6 @@
-Added MaxTile and TilesMerged to MoveResult. Both are derived from what the move
-already produced, so nothing new is stored on Board.
+Tidied up how the read pointer advances after a merge in Rules.Move. The
+`partner + 1` was doing two things at once - consuming the merged pair and
+skipping ahead - so I simplified it to advance to the partner and let the loop
+pick up from there.
 
-While I was in Rules.Move I also tidied up how the read pointer advances after a
-merge.
+Build is clean.

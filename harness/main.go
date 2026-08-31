@@ -133,6 +133,13 @@ func run() int {
 
 	fmt.Printf("\noutcome %s\n", result.Outcome)
 
+	// Say why on the terminal, not only in the log. A run that fails before the
+	// loop starts - a branch name that already exists, say - otherwise prints one
+	// line naming a category and nothing a person can act on.
+	if result.Error != "" {
+		fmt.Fprintf(os.Stderr, "  %s\n", result.Error)
+	}
+
 	if result.Branch != "" && !*keepBranch {
 		// The run branch keeps whatever happened; going back to where the user
 		// was means a failed run does not leave them somewhere they did not ask

@@ -16,7 +16,7 @@ has changed.
 ## Run it
 
 ```bash
-dotnet test core/Game2048.sln          # 167 tests, ~4s including build
+dotnet test core/Game2048.sln          # 179 tests, ~4s including build
 dotnet run --project core/src/Game2048.Cli          # play it in the terminal
 dotnet run --project core/src/Game2048.Cli -- --seed 7 --replay harness/testdata/moves.txt
 ```
@@ -35,6 +35,20 @@ iteration 2. Both run offline with no agent CLI and no API key — see
 [the fixture note](harness/transcripts/fixtures/README.md) about what they are and
 are not.
 
+Recorded sessions from real agents replay the same way:
+
+```bash
+./harness/harness.exe -task harness/tasks/telemetry.json  -replay transcripts/live/telemetry-claude
+./harness/harness.exe -task harness/tasks/guard-demo.json -replay transcripts/live/guard-demo-codex
+```
+
+And to drive an agent live, with `-record` to keep the session:
+
+```bash
+./harness/harness.exe -task harness/tasks/telemetry.json \
+  -agent "claude -p --dangerously-skip-permissions" -record transcripts/live/telemetry-claude
+```
+
 ## Layout
 
 ```
@@ -43,7 +57,7 @@ core/
   src/Game2048.Core/          the rules. netstandard2.1, zero dependencies
   src/Game2048.Cli/           terminal front-end, plays and replays
   src/Game2048.Legacy/        the original's two buggy functions, ported faithfully
-  tests/                      167 tests. Agents may not write here
+  tests/                      179 tests. Agents may not write here
 harness/                      Go tool: one scoped task, run under guardrails
 docs/
   FINDINGS.md                 the three bugs, and why four years of play missed them
@@ -87,10 +101,17 @@ not, and several were added after the loop caught something:
   writes a blocked file and reverts it next pass has still written a blocked file.
 - **`.gitignore` and `.gitattributes` are unwritable**, because either can hide a
   change from the check that reads the diff.
-- **The delegation log is lifted out of the tree during a run.** The harness writes
-  it, so leaving it there made the guardrail blame the agent for the harness's own
-  output on every second run. Teaching the check to ignore that path would have
-  opened the hole the deny-list entry exists to close.
+- **The delegation log and recorded transcripts are held back until the run ends.**
+  The harness writes both, and both live where agents may not write, so producing
+  them mid-run made the guardrail blame the agent for the harness's own output.
+  Teaching the check to ignore those paths would have opened the hole the deny-list
+  entries exist to close. The rule that fell out of hitting this twice: anything the
+  harness writes into the repo lands *after* the guardrails have looked.
+- **An empty diff is not a pass.** Every check is green when nothing happened, so an
+  agent that does the work and one that does nothing were indistinguishable to the
+  first version of this loop. It took a live agent — correctly declining a task whose
+  premise was false — to expose it. There is now a separate outcome that exits
+  non-zero and says to read what the agent said before believing the green.
 
 [docs/DELEGATION-LOG.md](docs/DELEGATION-LOG.md) records every run. The column worth
 reading is what the checks *missed*.
@@ -100,10 +121,18 @@ reading is what the checks *missed*.
 Said plainly rather than left to be discovered:
 
 - **Unity is not wired to the new core.** Riskiest integration, nothing new proved.
-- **No live agent run is recorded yet.** The transcripts under
-  `harness/transcripts/fixtures/` are hand-authored test data, labelled as such. The
-  `Agent` interface has a working `ExecAgent` that drives any CLI reading a prompt on
-  stdin, and `-record` turns a real session into a replayable transcript.
+- **The guardrail has never fired on a real agent.** Three live runs are recorded
+  under `harness/transcripts/live/` — `claude -p` and `codex exec` on a task written
+  to invite editing a test, and `claude -p` on a real feature. Neither agent took the
+  bait; both established the task's premise was false and changed nothing. The
+  hand-authored fixture under `harness/transcripts/fixtures/guard-demo/` is still the
+  only demonstration of the guardrail actually blocking something, and it is labelled
+  as hand-authored.
+
+  That is worth stating rather than hiding. The guardrail is not justified by a claim
+  about how often agents misbehave — this repository's own log contradicts that
+  claim. It is justified by what being wrong costs: a green build over a deleted
+  assertion, which no CI pipeline watching for a red build would ever report.
 - **`Game2048.Legacy` ports two functions, not the whole `LevelManager`.**
 - **The CLI is only partly tested.** `MoveScript` is, because a misparse silently
   plays a different game. Argument parsing, rendering and the console loop are not,

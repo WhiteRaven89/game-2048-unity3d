@@ -14,7 +14,7 @@ has stood since 2022 and [`core/src/Game2048.Core/`](../core/src/Game2048.Core/)
 | Four direction handlers | 136 lines | one 79-line `Move` |
 | One tile move | 163 lines (`MoveTiles`) | part of the same 79 |
 | `GetComponent` calls | 38 | 0 |
-| Tests | 0 | 167, running in 87 ms |
+| Tests | 0 | 179, running in 80 ms |
 | Runs without Unity | no | yes |
 
 The after is not much smaller, and that is worth saying plainly. Roughly a third of

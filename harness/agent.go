@@ -163,9 +163,57 @@ func (a *ExecAgent) Flush() error {
 // It reproduces what the agent did, not what a model would say now - which is
 // the point. A recorded failure stays a failure, so the self-correcting loop can
 // be shown working on the same case every time.
+//
+// The whole transcript is read into memory up front, before the run branch is
+// created. It has to be: replaying at the recorded base checks out a commit from
+// before the transcript was committed, and reading the files lazily then finds an
+// empty directory. The transcript describes the run; it cannot also be subject to
+// it.
 type ReplayAgent struct {
 	Dir        string // repo root
-	Transcript string // directory holding iteration-NN.* files
+	Transcript string // directory the session was loaded from
+
+	base       string
+	iterations map[int]recordedIteration
+}
+
+type recordedIteration struct {
+	output string
+	patch  string
+}
+
+func newReplayAgent(dir, transcript string) (*ReplayAgent, error) {
+	agent := &ReplayAgent{
+		Dir:        dir,
+		Transcript: transcript,
+		iterations: map[int]recordedIteration{},
+	}
+
+	if content, err := os.ReadFile(filepath.Join(transcript, "base.txt")); err == nil {
+		agent.base = strings.TrimSpace(string(content))
+	}
+
+	for number := 1; ; number++ {
+		stem := filepath.Join(transcript, fmt.Sprintf("iteration-%02d", number))
+
+		output, err := os.ReadFile(stem + ".output.txt")
+		if err != nil {
+			break
+		}
+
+		patch, err := os.ReadFile(stem + ".patch")
+		if err != nil {
+			return nil, fmt.Errorf("iteration %d has an output but no patch: %w", number, err)
+		}
+
+		agent.iterations[number] = recordedIteration{output: string(output), patch: string(patch)}
+	}
+
+	if len(agent.iterations) == 0 {
+		return nil, fmt.Errorf("%s holds no iterations", transcript)
+	}
+
+	return agent, nil
 }
 
 func (a *ReplayAgent) Name() string { return "replay:" + a.Transcript }
@@ -173,27 +221,15 @@ func (a *ReplayAgent) Name() string { return "replay:" + a.Transcript }
 // RecordedBase returns the commit this session was captured against, or "" for a
 // transcript that does not name one - the hand-authored fixtures, which are
 // regenerated against whatever is current and so replay from HEAD.
-func (a *ReplayAgent) RecordedBase() string {
-	content, err := os.ReadFile(filepath.Join(a.Transcript, "base.txt"))
-	if err != nil {
-		return ""
-	}
-
-	return strings.TrimSpace(string(content))
-}
+func (a *ReplayAgent) RecordedBase() string { return a.base }
 
 func (a *ReplayAgent) Work(_ context.Context, _ string, iteration int) (string, error) {
-	stem := filepath.Join(a.Transcript, fmt.Sprintf("iteration-%02d", iteration))
-
-	output, err := os.ReadFile(stem + ".output.txt")
-	if err != nil {
-		return "", fmt.Errorf("transcript has no iteration %d: %w", iteration, err)
+	recorded, ok := a.iterations[iteration]
+	if !ok {
+		return "", fmt.Errorf("this session ran %d iterations; the loop asked for %d", len(a.iterations), iteration)
 	}
 
-	patch, err := os.ReadFile(stem + ".patch")
-	if err != nil {
-		return string(output), fmt.Errorf("transcript iteration %d has no patch: %w", iteration, err)
-	}
+	output, patch := recorded.output, recorded.patch
 
 	// Reset first, and unconditionally. A recorded patch is cumulative against the
 	// run's base, the same way the guardrail diff is, so the tree has to be back at
@@ -215,8 +251,11 @@ func (a *ReplayAgent) Work(_ context.Context, _ string, iteration int) (string, 
 		return string(output), nil
 	}
 
-	apply := exec.Command("git", "apply", "--whitespace=nowarn", stem+".patch")
+	// Fed on stdin rather than by path, for the same reason the transcript is held
+	// in memory: the file it came from may not exist in the tree being replayed.
+	apply := exec.Command("git", "apply", "--whitespace=nowarn", "-")
 	apply.Dir = a.Dir
+	apply.Stdin = strings.NewReader(patch)
 
 	var stderr bytes.Buffer
 	apply.Stderr = &stderr

@@ -207,7 +207,7 @@ func chooseAgent(repo *Repo, agentCmd, replayDir, recordDir string) (Agent, erro
 			return nil, fmt.Errorf("transcript %s: %w", replayDir, err)
 		}
 
-		return &ReplayAgent{Dir: repo.Root, Transcript: path}, nil
+		return newReplayAgent(repo.Root, path)
 	}
 
 	if agentCmd == "" {

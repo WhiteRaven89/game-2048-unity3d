@@ -68,6 +68,37 @@ the same argument this repository makes about the Unity code, turned on its auth
 
 ---
 
+## Found the day before shipping: a sixth, and what was hiding it
+
+**The branch name is stamped to the minute, and two runs of one task fit inside a
+minute.** Every run gets `harness/<task>-<MMDD-HHMM>`. Replaying two recorded
+sessions of the same task back to back - which is exactly what `README.md` asks a
+reader to do, and what a walkthrough does - puts both in the same minute, and the
+second run dies before it starts: `the harness itself failed: a branch named
+harness/guard-demo-0831-1631 already exists`.
+
+*Found by:* cloning this branch into an empty directory and running the README's
+commands in the order they are printed. Nothing else had ever done that. Every
+previous run happened in the working tree the harness was written in.
+
+The part worth recording is why it survived so long. The rehearsal script I use to
+drive a walkthrough deletes `harness/*` branches between sections, so it can be run
+repeatedly. That cleanup also removed the collision, every time, silently. **The
+tooling built to demonstrate the thing was concealing a defect in the thing** - and
+it concealed it specifically along the path a reviewer would take, because that is
+the path the script was written to imitate.
+
+**What I changed:** `FreeBranchName` steps to the next free suffix rather than
+reusing or overwriting a name; a run branch is the record of a run. A finer
+timestamp would only have narrowed the window. There is a test.
+
+The rule underneath is the same one the five above produced, pointed at a new place:
+*anything that resets state for you is also hiding what would have happened without
+it.* Convenience scripts included. The check that found this was worth more than any
+of them - clone it cold and run what the documentation says.
+
+---
+
 ## guard-demo - 2026-08-30T16:41:03+05:30
 
 | | |

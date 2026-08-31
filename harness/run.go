@@ -85,7 +85,12 @@ func execute(repo *Repo, task *Task, agent Agent, timeout time.Duration, out io.
 
 	defer func() { run.Elapsed = time.Since(run.Started) }()
 
-	branch := fmt.Sprintf("harness/%s-%s", task.ID, time.Now().Format("0102-1504"))
+	branch, err := repo.FreeBranchName(fmt.Sprintf("harness/%s-%s", task.ID, time.Now().Format("0102-1504")))
+	if err != nil {
+		run.Outcome, run.Error = OutcomeErrored, err.Error()
+
+		return run
+	}
 
 	// A recorded session is replayed at the commit it was recorded against, not at
 	// whatever HEAD happens to be. Otherwise a transcript stops working the moment

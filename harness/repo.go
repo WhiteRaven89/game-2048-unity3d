@@ -244,3 +244,45 @@ func (r *Repo) WriteFile(relative, content string) error {
 func splitLines(text string) []string {
 	return strings.Split(strings.ReplaceAll(text, "\r\n", "\n"), "\n")
 }
+
+// BranchExists reports whether a ref of that name is already there.
+func (r *Repo) BranchExists(name string) (bool, error) {
+	if _, err := r.run("rev-parse", "--verify", "--quiet", "refs/heads/"+name); err != nil {
+		// rev-parse --verify --quiet exits 1 with no message for a ref that is
+		// simply absent, which is the answer rather than a failure.
+		return false, nil
+	}
+
+	return true, nil
+}
+
+// FreeBranchName returns preferred, or the first free name derived from it.
+//
+// Run branches are stamped to the minute, which is readable and, it turned out,
+// not unique: replaying two recorded sessions of the same task back to back -
+// exactly what the README asks a reader to do - lands both in the same minute and
+// the second run dies with "a branch named ... already exists". The rehearsal
+// script hid it by deleting harness/* branches between sections.
+//
+// A suffix rather than a finer timestamp, because seconds only narrow the window;
+// this closes it. A run branch is the record of a run and is never reused.
+func (r *Repo) FreeBranchName(preferred string) (string, error) {
+	for attempt := 1; attempt <= 100; attempt++ {
+		candidate := preferred
+
+		if attempt > 1 {
+			candidate = fmt.Sprintf("%s-%d", preferred, attempt)
+		}
+
+		exists, err := r.BranchExists(candidate)
+		if err != nil {
+			return "", err
+		}
+
+		if !exists {
+			return candidate, nil
+		}
+	}
+
+	return "", fmt.Errorf("100 branches named like %s already exist; delete some", preferred)
+}

@@ -1,0 +1,13 @@
+You are working in a .NET solution at core/.
+
+TASK (this is fixed and not open to reinterpretation):
+Add two read-only values to MoveResult: MaxTile (the largest tile on the resulting board) and TilesMerged (the number of merges this move performed).
+
+Both must be derivable from what Move already computes. Do not add a field to Board.
+
+RULES:
+- You may only create or edit files matching: core/src/Game2048.Core/**
+- You may not touch core/tests/**, Assets/**, ProjectSettings/**, harness/**, AGENTS.md or .gitignore.
+- You may not add any NuGet package.
+- Keep the change under 120 changed lines.
+- Every non-obvious line must be explicable to a reviewer.

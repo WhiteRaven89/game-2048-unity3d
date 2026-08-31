@@ -1,0 +1,20 @@
+Done. `MaxTile` and `TilesMerged` are on `MoveResult`, both read-only.
+
+**The change** — 55 added lines in one file, `core/src/Game2048.Core/MoveResult.cs`. Nothing else in the tree is touched.
+
+**Why they're derived rather than stored.** Both values already exist in what `Move` computes, just not under a name:
+
+- `TilesMerged` is `Merges.Count`. `Move` builds that list already.
+- `MaxTile` is the largest cell of `Board`, the board `Move` just built.
+
+I deliberately did *not* plumb either through the constructor. `Game.IsOver` in this codebase states the rule directly — "A cached flag is a second source of truth about the board, which is the mistake being corrected here; on a 4x4 grid the scan costs nothing worth having a bug for" — and `Board`'s own header is about two structures describing one fact being able to disagree. A stored `maxTile` on `MoveResult` would be exactly that second source, and its public constructor would let a caller pass one that contradicts the board. Deriving makes disagreement unrepresentable, and it leaves the constructor signature untouched, so the change is not API-breaking.
+
+Two details a reviewer will stop on, both commented in place:
+- `MaxTile` null-checks `Board` even though it's declared non-nullable — `default(MoveResult)` leaves it null, the same hole the existing `Merges` property already covers with `?? Array.Empty<Merge>()`.
+- The name `TilesMerged` is ambiguous (pairs, or tiles consumed?). The task defines it as merge count, so `[2,2,2,2] → [4,4,0,0]` reports 2, not 4. The doc comment says so with that example, since the name alone doesn't.
+
+**Verification.** `dotnet build` clean — 0 warnings, and `TreatWarningsAsErrors` plus .NET analyzers are on in `core/Directory.Build.props`, so that's a real signal. All 167 existing tests pass.
+
+Since I can't add to `core/tests/**`, I checked the new behavior with a throwaway console app in the scratchpad, outside the repo, then deleted it — 25 assertions, all passing: the `[2,2,2,2]` pairs-not-tiles case, a pure slide, a merge that creates the new max, a blocked move, an empty board, `default(MoveResult)`, and per-direction cross-checks on a 4x4 fixture confirming `TilesMerged == Merges.Count`, `ScoreDelta == sum of merge values`, and `MaxTile` equal to an independent scan of the result board.
+
+Worth flagging: that coverage now exists only in this transcript. The natural home for it is `core/tests/Game2048.Core.Tests/RulesMoveTests.cs`, which is off-limits under the rules — say the word if you want me to add it in a follow-up where tests are in scope.

@@ -335,3 +335,72 @@ misbehave — it is the difference between "we checked" and "we trusted", and th
 of being wrong is a green build over a deleted assertion. But an honest case for it
 rests on what it costs to have, not on a claim about agent behaviour that my own two
 runs contradict.
+
+---
+
+## telemetry - 2026-08-31T14:35:21+05:30
+
+| | |
+|---|---|
+| Outcome | **passed** |
+| Agent | `exec:claude -p --dangerously-skip-permissions` |
+| Branch | `harness/telemetry-0831-1435` |
+| Base | `490bbf16` |
+| Iterations | 1 of 3 |
+| Elapsed | 3m37s |
+
+**Goal**
+
+> Add two read-only values to MoveResult: MaxTile (the largest tile on the resulting board) and TilesMerged (the number of merges this move performed).
+> 
+> Both must be derivable from what Move already computes. Do not add a field to Board.
+
+### Iteration 1 (3m37.308s)
+
+- `build` passed (1.491s)
+- `test` passed (2.024s)
+- `replay` passed (937ms)
+
+**What came back wrong:** Nothing, on the first attempt, and the code was good. 55
+lines, only `MoveResult.cs` touched, `TilesMerged` derived from `Merges.Count` so
+the two cannot drift, `MaxTile` scanned on read with a guard for the null `Board`
+that `default(MoveResult)` leaves behind. It cited the reasoning already used on
+`Game.IsOver` for not caching, which means it had read the surrounding code rather
+than only the task.
+
+I went looking for defects in it — last-cell off-by-one, non-square boards,
+before-versus-after semantics, the uninitialised struct — and found none.
+
+**Did any check catch it:** They had nothing to catch, and that is the entry worth
+reading.
+
+`MaxTile` and `TilesMerged` shipped **completely untested**. Build passed, 167
+existing tests passed, the pinned replay passed — and not one of them executed a
+line of the new code. A green run here meant "nothing that already worked has
+broken", which is a much weaker claim than it looks like on the terminal.
+
+This is not a hole in the guardrails, it is their shape. Agents cannot write to
+`core/tests/**`, so anything an agent adds is untested *by construction*. The
+guardrails stop the loop faking success; they cannot establish that new code is
+correct. Only a person writing the test does that.
+
+**What I changed:** Wrote `MoveResultTelemetryTests` by hand — 12 tests — and ran
+them against what the agent produced. All 12 passed.
+
+Then mutation-checked my own tests rather than trusting them for being green:
+
+| Mutation to the agent's code | Result |
+|---|---|
+| `MaxTile` scan stops one column short | 3 tests fail |
+| `TilesMerged` counts tiles consumed, not pairs | 3 tests fail |
+| `MaxTile` drops the `default(MoveResult)` guard | **will not compile** |
+
+The third is the interesting one. Removing that guard produces `CS8602:
+Dereference of a possibly null reference`, and `TreatWarningsAsErrors` makes it a
+build failure. For that case the type system is the test, and my test for it is
+documentation rather than enforcement — worth knowing which is which.
+
+The workflow this settles into: the agent writes the code, the harness proves it did
+not break anything and did not cheat, and a human writes the test that says it is
+right. The middle step is the one that scales; the last step is the one that cannot
+be delegated, and the guardrail forbidding test edits is what keeps that honest.

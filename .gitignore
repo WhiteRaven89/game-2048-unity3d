@@ -62,7 +62,7 @@ output/
 *.json
 
 
-# --- LILA demo (branch demo/pure-core) ---------------------------------------
+# --- extracted core (branch demo/pure-core) ----------------------------------
 # The Unity-era rules above ignore *.csproj / *.sln / *.json wholesale, which
 # would make the entire core/ solution invisible to git. Re-include it here.
 !core/**/*.csproj

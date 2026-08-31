@@ -219,5 +219,5 @@ func chooseAgent(repo *Repo, agentCmd, replayDir, recordDir string) (Agent, erro
 		record = filepath.Join(repo.Root, "harness", recordDir)
 	}
 
-	return &ExecAgent{Command: strings.Fields(agentCmd), Dir: repo.Root, RecordTo: record}, nil
+	return &ExecAgent{Command: strings.Fields(agentCmd), Dir: repo.Root, Base: repo.Base, RecordTo: record}, nil
 }

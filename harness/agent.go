@@ -31,10 +31,22 @@ type Agent interface {
 	Work(ctx context.Context, prompt string, iteration int) (string, error)
 }
 
+// RecordedBase is implemented by an agent that replays a session captured at a
+// known commit. A recorded patch is a diff against that commit, so replaying it
+// anywhere else is not reproducing the session - it is applying a patch to a tree
+// it was never written for, which fails as soon as the work is merged.
+type RecordedBase interface {
+	RecordedBase() string
+}
+
 // ExecAgent runs an external agent CLI, handing it the prompt on stdin.
 type ExecAgent struct {
 	Command []string
 	Dir     string
+
+	// Base is the commit the run started from, written into the transcript so a
+	// later replay can return to it.
+	Base string
 
 	// RecordTo, when set, saves each iteration's prompt, output and resulting
 	// patch, turning a live session into one ReplayAgent can play back.
@@ -121,6 +133,14 @@ func (a *ExecAgent) Flush() error {
 		return err
 	}
 
+	// The commit every patch below is a diff against. Without it a transcript is
+	// only replayable until someone merges the work it recorded.
+	if a.Base != "" {
+		if err := os.WriteFile(filepath.Join(a.RecordTo, "base.txt"), []byte(a.Base+"\n"), 0o644); err != nil {
+			return err
+		}
+	}
+
 	for _, entry := range a.recordings {
 		stem := filepath.Join(a.RecordTo, fmt.Sprintf("iteration-%02d", entry.iteration))
 
@@ -149,6 +169,18 @@ type ReplayAgent struct {
 }
 
 func (a *ReplayAgent) Name() string { return "replay:" + a.Transcript }
+
+// RecordedBase returns the commit this session was captured against, or "" for a
+// transcript that does not name one - the hand-authored fixtures, which are
+// regenerated against whatever is current and so replay from HEAD.
+func (a *ReplayAgent) RecordedBase() string {
+	content, err := os.ReadFile(filepath.Join(a.Transcript, "base.txt"))
+	if err != nil {
+		return ""
+	}
+
+	return strings.TrimSpace(string(content))
+}
 
 func (a *ReplayAgent) Work(_ context.Context, _ string, iteration int) (string, error) {
 	stem := filepath.Join(a.Transcript, fmt.Sprintf("iteration-%02d", iteration))

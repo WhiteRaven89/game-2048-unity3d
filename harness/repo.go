@@ -97,8 +97,17 @@ func (r *Repo) CurrentBranch() (string, error) {
 	return strings.TrimSpace(out), err
 }
 
-func (r *Repo) CreateBranch(name string) error {
-	_, err := r.run("checkout", "-b", name)
+// CreateBranch starts a run branch. An empty startPoint branches from HEAD; a
+// commit branches from there instead, which is what replaying a recorded session
+// needs - the patches in it are diffs against that commit and nothing else.
+func (r *Repo) CreateBranch(name, startPoint string) error {
+	args := []string{"checkout", "-b", name}
+
+	if startPoint != "" {
+		args = append(args, startPoint)
+	}
+
+	_, err := r.run(args...)
 
 	return err
 }

@@ -87,7 +87,24 @@ func execute(repo *Repo, task *Task, agent Agent, timeout time.Duration, out io.
 
 	branch := fmt.Sprintf("harness/%s-%s", task.ID, time.Now().Format("0102-1504"))
 
-	if err := repo.CreateBranch(branch); err != nil {
+	// A recorded session is replayed at the commit it was recorded against, not at
+	// whatever HEAD happens to be. Otherwise a transcript stops working the moment
+	// its own work is reviewed and merged, which is precisely when you most want to
+	// be able to play it back.
+	startPoint := ""
+
+	if recorded, ok := agent.(RecordedBase); ok {
+		startPoint = recorded.RecordedBase()
+	}
+
+	if startPoint != "" {
+		run.Base = startPoint
+		repo.Base = startPoint
+
+		fmt.Fprintf(out, "replaying at the commit this session was recorded against: %s\n", short(startPoint))
+	}
+
+	if err := repo.CreateBranch(branch, startPoint); err != nil {
 		run.Outcome, run.Error = OutcomeErrored, err.Error()
 
 		return run
